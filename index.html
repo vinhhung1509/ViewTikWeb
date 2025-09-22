@@ -1,74 +1,63 @@
-<!doctype html>
-<html>
-<head>
-  <meta charset="utf-8" />
-  <title>Tracker view UID</title>
-  <style>
-    body{font-family:Arial; padding:20px}
-    table{border-collapse:collapse;width:100%;margin-top:20px}
-    th,td{border:1px solid #ddd;padding:8px;text-align:left}
-  </style>
-</head>
-<body>
-  <h2>Tracker view UID</h2>
+<table id="tbl">
+  <thead>
+    <tr><th>UID</th><th>Views</th><th>Last updated</th></tr>
+  </thead>
+  <tbody></tbody>
+</table>
 
-  <table id="tbl">
-    <thead>
-      <tr><th>UID</th><th>Views</th><th>Last updated</th></tr>
-    </thead>
-    <tbody></tbody>
-  </table>
+<script>
+const UIDS_URL  = 'https://vinhhung1509.github.io/ViewTikWeb/data/uids.json';
+const VIEWS_URL = 'https://vinhhung1509.github.io/ViewTikWeb/data/views.json';
 
-  <script>
-    const UIDS_URL  = 'https://vinhhung1509.github.io/ViewTikWeb/data/uids.json';
-    const VIEWS_URL = 'https://vinhhung1509.github.io/ViewTikWeb/data/views.json';
+let uidList = [];
 
+// Load danh sách UID
+async function loadUIDs(){
+  try{
+    const res = await fetch(UIDS_URL + '?t=' + Date.now());
+    uidList = await res.json();
+  }catch(e){
+    console.error("Không đọc được uids.json:", e);
+    uidList = [];
+  }
+}
 
-    let uidList = [];
+// Load dữ liệu views
+async function loadViews(){
+  try{
+    const res = await fetch(VIEWS_URL + '?t=' + Date.now());
+    return await res.json();
+  }catch(e){
+    console.error("Không đọc được views.json:", e);
+    return {};
+  }
+}
 
-    // Load danh sách UID
-    async function loadUIDs(){
-      try{
-        const res = await fetch(UIDS_URL + '?t=' + Date.now());
-        uidList = await res.json();
-      }catch(e){
-        console.error("Không đọc được uids.json:", e);
-        uidList = [];
-      }
-    }
+// Render bảng
+async function render(){
+  const data = await loadViews();
+  const tbody = document.querySelector('#tbl tbody');
+  tbody.innerHTML = '';
 
-    // Load dữ liệu views
-    async function loadViews(){
-      try{
-        const res = await fetch(VIEWS_URL + '?t=' + Date.now());
-        return await res.json();
-      }catch(e){
-        console.error("Không đọc được views.json:", e);
-        return {};
-      }
-    }
+  for(const uid of uidList){
+    const info = data[uid] || {};
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td>${uid}</td>
+      <td>${info.views ?? '—'}</td>
+      <td>${info.updated ?? '—'}</td>
+    `;
+    tbody.appendChild(row);
+  }
+}
 
-    // Render bảng
-    async function render(){
-      await loadUIDs();
-      const data = await loadViews();
-      const tbody = document.querySelector('#tbl tbody');
-      tbody.innerHTML = '';
+// Chạy lần đầu
+async function init(){
+  await loadUIDs();
+  render();
+  // Cập nhật mỗi 10s
+  setInterval(render, 1000);
+}
 
-      for(const uid of uidList){
-        const info = data[uid] || {};
-        const row = document.createElement('tr');
-        row.innerHTML = `
-          <td>${uid}</td>
-          <td>${info.views ?? '—'}</td>
-          <td>${info.updated ?? '—'}</td>
-        `;
-        tbody.appendChild(row);
-      }
-    }
-
-    render();
-    setInterval(render, 10000); // reload 10s/lần
-  </script>
-</body>
-</html>
+init();
+</script>
