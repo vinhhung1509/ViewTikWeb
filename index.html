@@ -1,35 +1,96 @@
-<!DOCTYPE html>
-<html lang="vi">
+<!doctype html>
+<html>
 <head>
-  <meta charset="UTF-8">
-  <title>Quản lý UID</title>
+  <meta charset="utf-8" />
+  <title>Tracker view UID</title>
+  <style>
+    body{font-family:Arial; padding:20px}
+    input{padding:5px;margin-right:5px}
+    button{padding:5px 10px}
+    table{border-collapse:collapse;width:100%;margin-top:20px}
+    th,td{border:1px solid #ddd;padding:8px;text-align:left}
+    .del-btn{background:#e74c3c;color:#fff;border:none;padding:4px 8px;cursor:pointer}
+  </style>
 </head>
 <body>
-  <h1>Danh sách UID</h1>
+  <h2>Tracker view UID</h2>
+  
+  <div>
+    <input id="uidInput" type="text" placeholder="Nhập UID..." />
+    <button onclick="addUid()">Thêm UID</button>
+  </div>
 
-  <ul id="uidList"></ul>
+  <table id="tbl">
+    <thead>
+      <tr><th>UID</th><th>Views</th><th>Last updated</th><th>Xóa</th></tr>
+    </thead>
+    <tbody></tbody>
+  </table>
 
   <script>
-    async function loadUIDs() {
-      try {
-        // Đọc file uids.json trực tiếp từ repo GitHub Pages
-        let res = await fetch("data/uids.json");
-        let data = await res.json();
+    const UIDS_URL  = './data/uids.json';
+    const VIEWS_URL = './data/views.json';
 
-        let list = document.getElementById("uidList");
-        list.innerHTML = "";
+    let uidList = [];
 
-        data.forEach(uid => {
-          let li = document.createElement("li");
-          li.textContent = uid;
-          list.appendChild(li);
-        });
-      } catch (err) {
-        console.error("Không thể tải uids.json:", err);
+    // Load danh sách UID từ file JSON
+    async function loadUIDs(){
+      try{
+        const r = await fetch(UIDS_URL + '?t=' + Date.now());
+        uidList = await r.json();
+      }catch(e){
+        console.error("Không đọc được uids.json:", e);
+        uidList = [];
       }
     }
 
-    loadUIDs();
+    function addUid(){
+      const input = document.getElementById("uidInput");
+      const uid = input.value.trim();
+      if(uid && !uidList.includes(uid)){
+        uidList.push(uid);
+        // ⚠️ Không ghi được trực tiếp vào uids.json trên Github Pages
+        // -> Cần sửa file thủ công hoặc gọi API ngoài
+        renderTable({});
+      }
+      input.value = "";
+    }
+
+    function deleteUid(uid){
+      uidList = uidList.filter(u => u !== uid);
+      renderTable({});
+    }
+
+    function renderTable(data){
+      const tbody = document.querySelector('#tbl tbody');
+      tbody.innerHTML = '';
+      for(const uid of uidList){
+        const info = data[uid] || {};
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${uid}</td>
+          <td>${info.views ?? '—'}</td>
+          <td>${info.updated ?? '—'}</td>
+          <td><button class="del-btn" onclick="deleteUid('${uid}')">X</button></td>
+        `;
+        tbody.appendChild(row);
+      }
+    }
+
+    async function load(){
+      await loadUIDs();
+      try{
+        const r = await fetch(VIEWS_URL + '?t=' + Date.now());
+        const data = await r.json();
+        renderTable(data);
+      }catch(e){ 
+        console.error("Không đọc được views.json:", e);
+        renderTable({});
+      }
+    }
+
+    load();
+    setInterval(load, 10000);
   </script>
 </body>
 </html>
